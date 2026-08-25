@@ -1,0 +1,28 @@
+name: Compile MCLoginFix Tweak
+
+on:
+  workflow_dispatch: # Allows you to press a button on your phone browser to run this
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Theos Compilation Environment
+        uses: beerpiss/theos-action@v1
+
+      - name: Build Tweak Binary Payloads
+        run: |
+          make package THEOS_PACKAGE_SCHEME=rootless
+          # Extracts raw compiled payload away from standard packaging formats
+          mkdir -p output
+          cp .theos/obj/debug/MCLoginFix.dylib ./output/MCLoginFix.dylib
+
+      - name: Export Compiled Patch to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: MCLoginFix-Dylib
+          path: output/MCLoginFix.dylib
