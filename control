@@ -1,0 +1,6 @@
+Package: com.youridentity.mcloginfix
+Name: MCLoginFix
+Depends: mobilesubstrate
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: Bypasses secure browser window callback dependencies on modified environments.
