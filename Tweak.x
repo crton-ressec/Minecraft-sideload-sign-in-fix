@@ -1,57 +1,31 @@
 #import <UIKit/UIKit.h>
-#import <SafariServices/SafariServices.h>
+#import <AuthenticationServices/AuthenticationServices.h>
 
-%hook MinecraftXboxAuthViewController
+// Hooking Apple's Authentication Framework instead of Mojang's old layouts
+%hook ASWebAuthenticationSession
 
-- (void)viewDidLoad {
-    %orig;
-    NSLog(@"[MC-AuthFix] Successfully initialized tweak hooking layers.");
+- (id)initWithURL:(NSURL *)url callbackURLScheme:(NSString *)callbackURLScheme completionHandler:(void (^)(NSURL * _Nullable callbackURL, NSError * _Nullable error))completionHandler {
+    
+    NSLog(@"[MC-GlobalFix] Captured authentic cross-platform login URL packet: %@", url);
+    
+    // Check if the request is coming from Mojang's authentication server loops
+    if ([url.absoluteString containsString:@"login.live.com"] || [callbackURLScheme containsString:@"microsoft-xbox-auth"]) {
+        NSLog(@"[MC-GlobalFix] Overriding sandbox constraints for Microsoft account linking.");
+        
+        // This forces LiveContainer to intercept and process the callback scheme natively
+        callbackURLScheme = @"livecontainer"; 
+    }
+    
+    return %orig(url, callbackURLScheme, completionHandler);
 }
 
-// Modern iOS Scene-Safe View Presentation Context Override
-- (void)presentWebAuthenticationSession:(id)session {
-    NSLog(@"[MC-AuthFix] Intercepted restricted system authentication window.");
-    
-    UIViewController *rootVC = nil;
-    
-    // Safely iterate through modern UIWindowScenes to find the active foreground window
-    if (@available(iOS 13.0, *)) {
-        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
-            if (scene.activationState == UISceneActivationStateForegroundActive && [scene isKindOfClass:[UIWindowScene class]]) {
-                UIWindowScene *windowScene = (UIWindowScene *)scene;
-                for (UIWindow *window in windowScene.windows) {
-                    if (window.isKeyWindow) {
-                        rootVC = window.rootViewController;
-                        break;
-                    }
-                }
-            }
-            if (rootVC) break;
-        }
-    }
-    
-    // Fallback block if running on an environment where scenes fail to populate
-    if (!rootVC) {
-        #pragma clang diagnostic push
-        #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-        rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
-        #pragma clang diagnostic pop
-    }
-    
-    // Inject the internal web portal framework over the top of the root context
-    if (rootVC) {
-        NSURL *authURL = [NSURL URLWithString:@"https://live.com"];
-        SFSafariViewController *safariVC = [[SFSafariViewController alloc] initWithURL:authURL];
-        
-        [rootVC presentViewController:safariVC animated:YES completion:nil];
-        NSLog(@"[MC-AuthFix] Injected safe web layer presentation frame override successfully.");
-    } else {
-        NSLog(@"[MC-AuthFix] Error: Could not resolve a valid UIWindow root controller.");
-    }
+- (BOOL)start {
+    NSLog(@"[MC-GlobalFix] Initializing security authentication frame execution.");
+    return %orig;
 }
 
 %end
 
 __attribute__((constructor)) static void init() {
-    NSLog(@"[MC-AuthFix] Tweak loaded safely inside LiveContainer framework environment context.");
+    NSLog(@"[MC-GlobalFix] Low-level system framework hook active under LiveContainer profile context.");
 }
